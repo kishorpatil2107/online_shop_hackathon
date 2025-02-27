@@ -23,13 +23,21 @@ phases:
       - BUILD_TAG=$(date +%Y%m%d%H%M%S)
       - IMAGE_TAG="$IMAGE_NAME:$BUILD_TAG"
 
-  build:
-    commands:
-      - echo Build started on `date`
-      - zip -r online-shop-app.zip * .[^.]* # Include all files and hidden files
-      - echo Building the Docker image...
-      - docker build -t $IMAGE_TAG .
-      - docker tag $IMAGE_TAG $IMAGE_NAME:latest
+  # build:
+  #   commands:
+  #     - echo Build started on `date`
+  #     - zip -r online-shop-app.zip * .[^.]* # Include all files and hidden files
+  #     - echo Building the Docker image...
+  #     - docker build -t $IMAGE_TAG .
+  #     - docker tag $IMAGE_TAG $IMAGE_NAME:latest
+  pre_build:
+  commands:
+    - echo Fetching credentials from AWS SSM...
+    - export DOCKER_REGISTRY_USERNAME=$(aws ssm get-parameter --name "/myapp/docker-credentials/username" --with-decryption --query Parameter.Value --output text)
+    - export DOCKER_REGISTRY_PASSWORD=$(aws ssm get-parameter --name "/myapp/docker-credentials/password" --with-decryption --query Parameter.Value --output text)
+    - echo Logging in to Docker Hub...
+    - echo "$DOCKER_REGISTRY_PASSWORD" | docker login -u "$DOCKER_REGISTRY_USERNAME" --password-stdin
+
 
   post_build:
     commands:
